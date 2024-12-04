@@ -61,7 +61,7 @@ class SearchEngine:
 
         self.data_dir = data_dir
         self.query_history = []
-        n_selection = 100    
+        n_selection = 1000    
 
         response = openai.Embedding.create(
             model=self.embedding_model_name,
@@ -253,7 +253,9 @@ class SearchEngine:
         logger.info(f"Found {len(verified_results)} relevant results")
         result.matches = verified_results
 
-        return result
+        pdb.set_trace()
+
+        return verified_results
 
     ########################################################
     # Re-Ranking
@@ -281,6 +283,7 @@ class SearchEngine:
             model="gpt-4",
             messages=[
                 {"role": "assistant", "content": "You are a helpful assistant that determines if search results are relevant to the query. First line should be 'true' or 'false', second line should be a brief reason why."},
+                {"role": "assistant", "content": "make sure every parts of the result are relevant to the query. For example, if the query is about a specific color or style, the result must contain that color or style."},
                 {"role": "assistant", "content": f'Is this result relevant to the query?\nQuery: "{query}"\nResult: "{result}"'}
             ],
             max_tokens=50

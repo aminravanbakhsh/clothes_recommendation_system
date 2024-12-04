@@ -9,3 +9,4 @@ __pycache__/
 
 **/chat_feedback/**
 
+**/.pytest_cache/
