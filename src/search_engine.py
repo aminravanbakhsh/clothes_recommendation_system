@@ -216,6 +216,16 @@ class SearchEngine:
             include_metadata=True
         ) 
 
+        verified_results = []
+        for match in result.matches:
+            is_relevant, reason = self.verify_search_result_relevance(query, match)
+            if is_relevant:
+                verified_results.append(match)
+            else:
+                print(f"Result {match['id']} is not relevant. Reason: {reason}")
+
+        result.matches = verified_results
+
         return result
 
     ########################################################
@@ -232,3 +242,31 @@ class SearchEngine:
     ########################################################
     # query_history
     ########################################################
+
+    ########################################################
+    # verify_search_result_relevance
+    ########################################################
+
+    def verify_search_result_relevance(self, query: str, result: dict):
+        response = openai.ChatCompletion.create(
+            model=self.embedding_model_name,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that determines if search results are relevant to the query. First line should be 'true' or 'false', second line should be a brief reason why."},
+                {"role": "user", "content": f'Is this result relevant to the query?\nQuery: "{query}"\nResult: "{result}"'}
+            ],
+            max_tokens=50
+        )
+
+        # Split the response into lines and process
+        lines = response.choices[0].message['content'].strip().split('\n')
+        result = lines[0].lower().strip()
+        reason = lines[1].strip() if len(lines) > 1 else "No reason provided"
+        
+        if result == "true":
+            return True, reason
+        
+        elif result == "false":
+            return False, reason
+        
+        else:
+            raise ValueError(f"Invalid response from OpenAI: {result}")

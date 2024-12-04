@@ -35,3 +35,7 @@ data
    - images
    - articles.csv
 ```
+
+
+# free streamlit ports
+ps aux | grep streamlit | grep $(whoami) | awk '{print $2}' | xargs kill -9
