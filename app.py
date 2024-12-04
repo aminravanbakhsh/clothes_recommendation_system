@@ -1,6 +1,4 @@
 import os, sys
-import logging
-
 
 ########################################################
 # add src directory to the system path
@@ -10,6 +8,13 @@ root_dir = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join(root_dir, "data")
 
 sys.path.append(os.path.join(root_dir, "src"))
+
+########################################################
+# logging
+########################################################
+
+from logging_config import setup_logger
+logger = setup_logger(__name__)
 
 ########################################################
 # imports
@@ -26,11 +31,18 @@ from langchain_openai import ChatOpenAI
 
 import pdb
 
+########################################################
+# User info
+########################################################
+
 from user_info import OPENAI_API_KEY
 openai.api_key = OPENAI_API_KEY
 
-SE = SearchEngine(data_dir=data_dir, init_vector_database=False)
+########################################################
+# SearchEngine
+########################################################
 
+SE = SearchEngine(data_dir=data_dir, init_vector_database=False)
 
 ########################################################
 # Configuration
@@ -60,8 +72,12 @@ def init_session_state():
         st.session_state["message_counter"] = 0
 
 
+def get_history_of_information():
+    return "".join([message["role"] + ": " + message["content"] + "\n" for message in st.session_state["messages"]])
+
+
 ########################################################
-# Prompts
+# Prompts generation
 ########################################################
 
 def generate_welcome_message():
@@ -105,7 +121,7 @@ def ask_for_more_details_and_verify(input_text: str):
 
 
 ########################################################
-# Condition
+# Condition verification
 ########################################################
 
 def verify_user_input(input_text: str):
@@ -161,6 +177,8 @@ def verify_enough_details(input_text: str):
 
 
 ########################################################
+# Display 
+########################################################
 
 def display_chat_history():
     for message in st.session_state.get("messages", []):
@@ -176,6 +194,11 @@ def display_chat_history():
 
 # Main app
 def main():
+
+    ########################################################
+    # display
+    ########################################################
+
     # Initialize session state
     init_session_state()
 
@@ -191,7 +214,12 @@ def main():
         user_input = st.text_input(f"{USER_NAME}:", key="user_input_form_input")
         submit_button = st.form_submit_button(label='Submit')
 
+
+
+    ########################################################
     # Process user input
+    ########################################################
+
     if submit_button and user_input:
 
         # Increment message counter
@@ -200,7 +228,16 @@ def main():
         # Add user message to history
         st.session_state["messages"].append({"role": "user", "content": user_input})
   
-        valid_user_input, valid_user_input_reason = verify_user_input(st.session_state["messages"][-1]["content"])
+
+        history = get_history_of_information()
+        valid_user_input, valid_user_input_reason = verify_user_input(history)
+
+        # log
+        if valid_user_input:
+            logger.info(f"Valid clothing request. Reason: {valid_user_input_reason}")
+        else:
+            logger.info(f"Invalid clothing request. Reason: {valid_user_input_reason}")
+
 
         if valid_user_input:
 
@@ -217,8 +254,6 @@ def main():
             
             st.session_state["messages"].append({"role": "assistant", "content": assistant_message})
 
-
-
             print(f"Buying clothes. Reason: {valid_user_input_reason}")
 
             #hisotry of information
@@ -226,17 +261,35 @@ def main():
         
             valid_enough_details, valid_enough_details_reason = verify_enough_details(history_of_information)
 
+            # log
+            if valid_enough_details:
+                logger.info(f"Sufficient details provided. Reason: {valid_enough_details_reason}")
+            else:
+                logger.info(f"Insufficient details. Reason: {valid_enough_details_reason}")
+
+
             if valid_enough_details:
                 print(f"Enough details. Reason: {valid_enough_details_reason}")
 
 
                 search_results = SE.embedding_search(history_of_information, k_top=3).matches
+                
+                # log
+                if len(search_results) == 0:
+                    logger.info("No matching items found.")
+                else:
+                    logger.info(f"Found {len(search_results)} matching items")
+                    for result in search_results:
+                        logger.info(f"Matching item ID: {result['id']}, Score: {result['score']}, details: {result['metadata']}")
 
                 # Add search results to the chat history
                 for result in search_results:
                     image_path = SE.get_image_path(result["id"])
 
-                    # print(f"Image path for ID {result['id']}: {image_path}")  # Debugging output
+                    if not os.path.exists(image_path):
+                        logger.warning(f"Image file not found at path: {image_path}")
+                    else:
+                        logger.info(f"Image file successfully located at: {image_path}")
                     
                     # Instead of displaying the image directly, store it in the message
                     st.session_state["messages"].append({

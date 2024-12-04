@@ -11,8 +11,16 @@ sys.path.append(root_dir)
 sys.path.append(os.path.join(root_dir, "data"))
 
 ########################################################
+# logging
+########################################################
+
+from logging_config import setup_logger
+logger = setup_logger(__name__)
+
+########################################################
 # imports
 ########################################################
+
 
 import pandas as pd
 import pdb
@@ -38,9 +46,16 @@ from user_info import PINECONE_INDEX_NAME, PINECONE_API_KEY, PINECONE_ENVIRONMEN
 
 PC = Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
 
+
+########################################################
+# SearchEngine
+########################################################
+
 class SearchEngine:
 
     def __init__(self, init_vector_database: bool, data_dir: str = os.path.join(root_dir, "data")):
+
+        logger.info(f"Initializing SearchEngine with data_dir: {data_dir}")
         self.embedding_model_name = "text-embedding-ada-002"
         self.index_name = PINECONE_INDEX_NAME
 
@@ -59,6 +74,8 @@ class SearchEngine:
         # generating search text and embeddings
         ########################################################
 
+        logger.info(f"Loading articles from {os.path.join(self.data_dir, 'articles.csv')}")
+
         self.table = pd.read_csv(os.path.join(self.data_dir, "articles.csv"))
 
         if n_selection is not None:
@@ -68,6 +85,8 @@ class SearchEngine:
         self.table["search_text"] = self.table.progress_apply(self.row_to_text, axis=1)
 
         embeddings = self.embed_text_list(self.table["search_text"].tolist())
+        logger.info(f"Generated embeddings for {len(embeddings)} articles")
+
         self.table["embedding"] = embeddings
 
         ########################################################
@@ -77,7 +96,10 @@ class SearchEngine:
         existing_indexes_info = PC.list_indexes()
         existing_index_names = [index['name'] for index in existing_indexes_info.indexes]
 
+        logger.info(f"Checking for existing index: {self.index_name}")
         if self.index_name not in existing_index_names:
+
+            logger.info(f"Creating new Pinecone index: {self.index_name}")
             PC.create_index(
                 name=self.index_name,
                 dimension=self.embedding_dim,
@@ -109,6 +131,7 @@ class SearchEngine:
 
             batch_size = 100
         
+            logger.info(f"Upserting {len(vectors_to_upsert)} vectors to database")
             for i in tqdm(range(0, len(vectors_to_upsert), batch_size), desc="Upserting vectors"):
                 self.vector_database.upsert(
                     vectors=vectors_to_upsert[i:i+batch_size]
@@ -208,6 +231,9 @@ class SearchEngine:
     ########################################################
 
     def embedding_search(self, query: str, k_top: int = 10):
+
+        logger.info(f"Performing embedding search for query: {query}")
+
         query_embedding = self.embed_text(query)
 
         result = self.vector_database.query(
@@ -224,6 +250,7 @@ class SearchEngine:
             else:
                 print(f"Result {match['id']} is not relevant. Reason: {reason}")
 
+        logger.info(f"Found {len(verified_results)} relevant results")
         result.matches = verified_results
 
         return result
@@ -248,8 +275,10 @@ class SearchEngine:
     ########################################################
 
     def verify_search_result_relevance(self, query: str, result: dict):
+        logger.debug(f"Verifying relevance for result based on query. query: {query} result: {result}")
+
         response = openai.ChatCompletion.create(
-            model=self.embedding_model_name,
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that determines if search results are relevant to the query. First line should be 'true' or 'false', second line should be a brief reason why."},
                 {"role": "user", "content": f'Is this result relevant to the query?\nQuery: "{query}"\nResult: "{result}"'}
