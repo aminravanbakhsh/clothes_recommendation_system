@@ -39,3 +39,13 @@ data
 
 # free streamlit ports
 ps aux | grep streamlit | grep $(whoami) | awk '{print $2}' | xargs kill -9
+
+
+# pytest
+# Running Tests
+
+You can test the modules via the `tests` folder. To run the tests, use the following command:
+
+```
+pytest tests/test_search_engine.py
+```

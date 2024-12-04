@@ -253,7 +253,7 @@ class SearchEngine:
         logger.info(f"Found {len(verified_results)} relevant results")
         result.matches = verified_results
 
-        pdb.set_trace()
+        # pdb.set_trace()
 
         return verified_results
 
