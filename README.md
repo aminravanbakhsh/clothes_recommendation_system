@@ -1,8 +1,9 @@
-# clothes_recommendation_system
+## clothes_recommendation_system
 
 
-# create a new conda environment
+## create a new conda environment
 conda create -n proactive python=3.8 -y
+
 
 # activate the environment
 conda activate proactive
@@ -11,3 +12,26 @@ conda activate proactive
 # install the requirements
 pip install -r requirements.txt
 
+
+
+
+
+
+# data
+
+
+create an empty folder named data. By default, it will be ignored by git.
+download the data from [here](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data) and put it in the data folder.
+
+
+In order to download the data, you need to create an account on kaggle and accept the competition rules.
+
+
+the structure of the data folder should be the following:
+
+
+```
+data
+   - images
+   - articles.csv
+```
