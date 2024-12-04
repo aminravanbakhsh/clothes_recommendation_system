@@ -61,7 +61,7 @@ class SearchEngine:
 
         self.data_dir = data_dir
         self.query_history = []
-        n_selection = 1000    
+        n_selection = 100    
 
         response = openai.Embedding.create(
             model=self.embedding_model_name,
@@ -230,6 +230,26 @@ class SearchEngine:
     # Search
     ########################################################
 
+    def extract_search_material(self, query: str) -> str:
+        logger.info(f"Extracting search material from query: {query}")
+
+        response = openai.ChatCompletion.create( # Updated to use the new chat completions format
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": """You are a clothing search relevance checker. 
+                Your task is to determine if a search result matches the user's query.
+                Respond with ONLY two lines:
+                Line 1: Either 'true' or 'false'
+                Line 2: A brief explanation of your decision"""},
+                {"role": "user", "content": f"Query: {query}"},
+            ]
+        )
+
+        keywords = response.choices[0].message.content.strip()
+        logger.info(f"Extracted keywords: {keywords}")
+            
+        return keywords
+
     def embedding_search(self, query: str, k_top: int = 10):
 
         logger.info(f"Performing embedding search for query: {query}")
@@ -282,17 +302,16 @@ class SearchEngine:
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "assistant", "content": "You are a helpful assistant that determines if search results are relevant to the query. First line should be 'true' or 'false', second line should be a brief reason why."},
-                {"role": "assistant", "content": "make sure every parts of the result are relevant to the query. For example, if the query is about a specific color or style, the result must contain that color or style."},
-                {"role": "assistant", "content": f'Is this result relevant to the query?\nQuery: "{query}"\nResult: "{result}"'}
-            ],
-            max_tokens=50
+                {"role": "assistant", "content": f"Is this result relevant to the query?\nQuery: \"{query}\"\nResult: \"{result}\""}
+            ]
         )
 
         # Split the response into lines and process
         lines = response.choices[0].message['content'].strip().split('\n')
         result = lines[0].lower().strip()
         reason = lines[1].strip() if len(lines) > 1 else "No reason provided"
+
+
         
         if result == "true":
             return True, reason

@@ -104,7 +104,7 @@ def ask_for_more_details(history_text: str):
     return response.choices[0].message['content'].strip()
 
 
-def ask_to_rephrase_request():
+def ask_to_rephrase_bad_request():
     """Generate a response asking the user to rephrase their question about clothing."""
     response = openai.ChatCompletion.create(
         model=MODEL_NAME,
@@ -116,8 +116,13 @@ def ask_to_rephrase_request():
     return response.choices[0].message['content'].strip()
 
 
-def ask_for_more_details_and_verify(input_text: str):
-    pass
+def generate_no_results_message():
+    response = openai.ChatCompletion.create(
+        model=MODEL_NAME,
+        messages=[{"role": "assistant", "content": "No relevant items found."}],
+        max_tokens=30
+    )
+    return response.choices[0].message['content'].strip()
 
 
 ########################################################
@@ -246,7 +251,6 @@ def main():
         submit_button = st.form_submit_button(label='Submit')
 
 
-
     ########################################################
     # Process user input
     ########################################################
@@ -259,7 +263,6 @@ def main():
         # Add user message to history
         st.session_state["messages"].append({"role": "user", "content": user_input})
   
-
         history = get_history_of_information()
         valid_user_input, valid_user_input_reason = verify_user_input(history)
 
@@ -270,7 +273,17 @@ def main():
             logger.info(f"Invalid clothing request. Reason: {valid_user_input_reason}")
 
 
+        ########################################################
+        # valid request
+        ########################################################
+
         if valid_user_input:
+
+            print(f"Buying clothes. Reason: {valid_user_input_reason}")
+
+
+
+
 
             #to do: ask for more details
             # Get AI response
@@ -282,10 +295,13 @@ def main():
 
             # Add assistant message to history
             assistant_message = response['choices'][0]['message']['content']
-            
             st.session_state["messages"].append({"role": "assistant", "content": assistant_message})
 
-            print(f"Buying clothes. Reason: {valid_user_input_reason}")
+
+
+
+
+
 
             #hisotry of information
             history_of_information = "".join([message["role"] + ": " + message["content"] + "\n" for message in st.session_state["messages"]])
@@ -299,13 +315,19 @@ def main():
                 logger.info(f"Insufficient details. Reason: {valid_enough_details_reason}")
 
 
+            ########################################################
+            # Enough details
+            ########################################################
+
             if valid_enough_details:
                 print(f"Enough details. Reason: {valid_enough_details_reason}")
 
+                search_keywords = SE.extract_search_material(history_of_information)
 
-                search_results = SE.embedding_search(history_of_information, k_top=3).matches
+                search_results = SE.embedding_search(search_keywords, k_top=3)
                 
                 # log
+                
                 if len(search_results) == 0:
                     logger.info("No matching items found.")
                 else:
@@ -313,9 +335,22 @@ def main():
                     for result in search_results:
                         logger.info(f"Matching item ID: {result['id']}, Score: {result['score']}, details: {result['metadata']}")
 
-                # Add search results to the chat history
-                for result in search_results:
-                    image_path = SE.get_image_path(result["id"])
+
+                if len(search_results) == 0:
+                    assistant_message = generate_no_results_message()
+                    st.session_state["messages"].append({"role": "assistant", "content": assistant_message})
+
+                ########################################################
+                # Results found
+                ########################################################
+
+                else:
+
+                    # summarize results according to the user's query and history 
+                    # just response based on the results
+
+                    for result in search_results:
+                        image_path = SE.get_image_path(result["id"])
 
                     if not os.path.exists(image_path):
                         logger.warning(f"Image file not found at path: {image_path}")
@@ -332,12 +367,13 @@ def main():
                     })        
 
             else:
-                pass
-                #to do: ask for more details
+                 
+                assistant_message = ask_for_more_details(history_of_information)
+                st.session_state["messages"].append({"role": "assistant", "content": assistant_message})
         
         else:
             print(f"non relevant user input. Reason: {valid_user_input_reason}")
-            assistant_message = ask_to_rephrase_request()
+            assistant_message = ask_to_rephrase_bad_request()
 
             st.session_state["messages"].append({"role": "assistant", "content": assistant_message})
 

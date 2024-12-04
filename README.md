@@ -13,12 +13,7 @@ conda activate proactive
 pip install -r requirements.txt
 
 
-
-
-
-
 # data
-
 
 create an empty folder named data. By default, it will be ignored by git.
 download the data from [here](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data) and put it in the data folder.
@@ -48,4 +43,5 @@ You can test the modules via the `tests` folder. To run the tests, use the follo
 
 ```
 pytest tests/test_search_engine.py
+pytest tests/test_app.py
 ```
