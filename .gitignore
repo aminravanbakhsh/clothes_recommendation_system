@@ -1,11 +1,8 @@
-
 /data/*
 
-
 .DS_Store
-
 
 __pycache__/
 *.pyc
 
-src/user_info.py
+**/user_info.py
