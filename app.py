@@ -129,8 +129,8 @@ def verify_user_input(input_text: str):
     response = openai.ChatCompletion.create(
         model=MODEL_NAME,
         messages=[
-            {"role": "system", "content": "You are a helpful assistant that determines if users are asking about clothing purchases. First line should be 'true' or 'false', second line should be a brief reason why."},
-            {"role": "user", "content": f'Is this text asking about buying clothes: "{input_text}"?'}
+            {"role": "assistant", "content": "You are a helpful assistant that determines if users are asking about clothing purchases. First line should be 'true' or 'false', second line should be a brief reason why."},
+            {"role": "assistant", "content": f'Is this text asking about buying clothes: "{input_text}"?'}
         ],
         max_tokens=50
     )
@@ -155,8 +155,8 @@ def verify_enough_details(input_text: str):
     response = openai.ChatCompletion.create(
         model=MODEL_NAME,
         messages=[
-            {"role": "system", "content": "You are a helpful assistant that checks if the user has provided enough details about the clothing they want to buy. First line should be 'true' or 'false', second line should be a brief reason why."},
-            {"role": "user", "content": f'Is this text providing enough details about buying clothes: "{input_text}"? Check if it mentions at least two of the following: product name, product type, product group, graphical appearance, color group, perceived color value, perceived color master, department, index, index group, section, garment group, or detail description of the clothing.'}
+            {"role": "assistant", "content": "You are a helpful assistant that checks if the user has provided enough details about the clothing they want to buy. First line should be 'true' or 'false', second line should be a brief reason why."},
+            {"role": "assistant", "content": f'Is this text providing enough details about buying clothes: "{input_text}"? Check if it mentions at least two of the following: product name, product type, product group, graphical appearance, color group, perceived color value, perceived color master, department, index, index group, section, garment group, or detail description of the clothing.'}
         ],
         max_tokens=50
     )
@@ -188,8 +188,39 @@ def display_chat_history():
         elif message["role"] == "assistant":
             st.markdown(f"**Fashion Assistant:** {message['content']}")
             # Display image if the message contains image information
+
             if "image_path" in message:
+                # Display image
                 st.image(message["image_path"], caption=message.get("caption", ""), use_container_width=True)
+                
+                # Create columns for better layout
+                col1, col2 = st.columns(2)
+                
+                # Basic product information in first column
+                with col1:
+                    st.markdown("#### Product Details")
+                    st.markdown(f"**Product Name:** {message['details'].get('prod_name', 'N/A')}")
+                    st.markdown(f"**Product Type:** {message['details'].get('product_type_name', 'N/A')}")
+                    st.markdown(f"**Department:** {message['details'].get('department_name', 'N/A')}")
+                    st.markdown(f"**Category:** {message['details'].get('product_group_name', 'N/A')}")
+                
+                # Color and appearance information in second column
+                with col2:
+                    st.markdown("#### Style Details")
+                    st.markdown(f"**Color:** {message['details'].get('colour_group_name', 'N/A')}")
+                    st.markdown(f"**Pattern:** {message['details'].get('graphical_appearance_name', 'N/A')}")
+                    st.markdown(f"**Section:** {message['details'].get('section_name', 'N/A')}")
+                
+                # Description in full width
+                st.markdown("#### Description")
+                st.markdown(f"_{message['details'].get('detail_desc', 'No description available.')}_")
+                
+                # Technical details in expandable section
+                with st.expander("Technical Details"):
+                    st.markdown(f"**Item ID:** {message.get('id', 'N/A')}")
+                    st.markdown(f"**Match Score:** {message.get('score', 'N/A')}")
+                    st.markdown(f"**Index Group:** {message['details'].get('index_group_name', 'N/A')}")
+                    st.markdown(f"**Index Name:** {message['details'].get('index_name', 'N/A')}")
 
 
 # Main app
@@ -296,6 +327,7 @@ def main():
                         "role": "assistant",
                         "content": f"Found item with ID: {result['id']}.",
                         "image_path": image_path,
+                        "details": result["metadata"],
                         "caption": f"Found item with ID: {result['id']}"
                     })        
 

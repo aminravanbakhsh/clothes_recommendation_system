@@ -280,8 +280,8 @@ class SearchEngine:
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that determines if search results are relevant to the query. First line should be 'true' or 'false', second line should be a brief reason why."},
-                {"role": "user", "content": f'Is this result relevant to the query?\nQuery: "{query}"\nResult: "{result}"'}
+                {"role": "assistant", "content": "You are a helpful assistant that determines if search results are relevant to the query. First line should be 'true' or 'false', second line should be a brief reason why."},
+                {"role": "assistant", "content": f'Is this result relevant to the query?\nQuery: "{query}"\nResult: "{result}"'}
             ],
             max_tokens=50
         )
