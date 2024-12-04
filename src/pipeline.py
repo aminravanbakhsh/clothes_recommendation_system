@@ -7,17 +7,12 @@ import os, sys
 # add the data directory to the system path
 ########################################################
 
-
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir    = os.path.dirname(current_dir)
 
-
 sys.path.append(os.path.join(root_dir, "data"))
 
-
 ########################################################
-
-
 
 
 from search_engine import SearchEngine

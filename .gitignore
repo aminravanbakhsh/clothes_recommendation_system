@@ -6,3 +6,6 @@ __pycache__/
 *.pyc
 
 **/user_info.py
+
+**/chat_feedback/**
+

@@ -46,7 +46,7 @@ class SearchEngine:
 
         self.data_dir = data_dir
         self.query_history = []
-        n_selection = 200    
+        n_selection = 100    
 
         response = openai.Embedding.create(
             model=self.embedding_model_name,
