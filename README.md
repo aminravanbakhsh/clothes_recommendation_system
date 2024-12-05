@@ -100,8 +100,15 @@ docker run -p 8510:8510 \
 All logging is done using the `logger` object. To modify the logging configuration, edit the `src/logging_config.py` file.
 
 
-## Example Query
-"I am looking for a long white shirt."
+## Example Queries
+
+Here are some sample queries you can use to interact with the recommendation system:
+
+- "I am looking for a long white shirt."
+- "I need a long red dress."
+
+For more examples, please refer to the `HM_scenarios` folder.
+
 
 
 
@@ -134,7 +141,7 @@ All logging is done using the `logger` object. To modify the logging configurati
 
 The feedback mechanism leverages textual data to iteratively refine the recommendation engine. By analyzing user interactions over time, the system adapts to individual preferences and styles, utilizing historical keyword data to enhance search accuracy and relevance.
 
-Feedback with like or dislike will be converted to a text feedback. System generates thoughts based on the binary feedback by saving the details of products that user liked or disliked.
+Feedback with like or dislike will be converted to a text feedback. System generates thoughts based on the binary feedback by saving the details of products that user liked or disliked. (Not implemented yet)
 
 
 ## Additional Features

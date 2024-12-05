@@ -339,7 +339,7 @@ def main():
                 # Search with embeddings
                 ########################################################
 
-                k_top_embedding_search = 5
+                k_top_embedding_search = 10
 
                 search_keywords = st.session_state["search_engine"].extract_search_material(history)
                 search_results = st.session_state["search_engine"].embedding_search(search_keywords, k_top=k_top_embedding_search)
