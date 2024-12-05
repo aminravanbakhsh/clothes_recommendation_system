@@ -56,7 +56,7 @@ class SearchEngine:
     def __init__(self, init_vector_database: bool, data_dir: str = os.path.join(root_dir, "data")):
 
         logger.info(f"Initializing SearchEngine with data_dir: {data_dir}")
-        
+
         self.embedding_model_name   = "text-embedding-ada-002"
         self.embedding_dim          = 1536
         self.index_name             = PINECONE_INDEX_NAME
@@ -297,14 +297,14 @@ class SearchEngine:
     # verify_search_result_relevance
     ########################################################
 
-    def verify_search_result_relevance(self, query: str, result: dict):
-        logger.debug(f"Verifying relevance for result based on query. query: {query} result: {result}")
+    def verify_search_result_relevance(self, query: str, result: str):
+        logger.info(f"Verifying relevance for result based on query. query: {query} result: {result}")
 
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
                 {"role": "assistant", "content": f"""You are a clothing search relevance checker, used for a retrieval system.
-                Your task is to determine if a search result matches the user's query.
+                Your task is to determine if a search result matches the user's query. Pay more attention to the last message from the user.
                 Respond with ONLY two lines:
                 Line 1: Either 'true' or 'false'
                 Line 2: A brief explanation of your decision

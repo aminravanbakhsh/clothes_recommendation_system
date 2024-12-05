@@ -26,7 +26,7 @@ import openai
 import json
 from datetime import datetime
 import uuid
-
+from tqdm import tqdm
 # from langchain_openai import ChatOpenAI
 
 import pdb
@@ -95,6 +95,27 @@ def generate_welcome_message():
     return response.choices[0].message['content'].strip()
 
 
+def generate_prompt_results_of_query(history_text: str, results: list):
+
+    important_cols = ["prod_name", "product_type_name", "department_name", "product_group_name", "colour_group_name", "graphical_appearance_name", "section_name"]
+    results_text = "\n".join([f"ID: {result['id']}, Score: {result['score']}, Details: {', '.join(result['metadata'][col] for col in important_cols)}" for result in results])
+
+    response = openai.ChatCompletion.create(
+        model = MODEL_NAME,
+        messages = [
+            {"role": "assistant", 
+            "content": f"""Based on the following conversation and search results, generate an engaging prompt for the user to choose their favorite item.
+            For example: based on your requests, I found out following items related to your requests:
+            results: {results_text}
+            conversation: {history_text}
+            """}
+        ],
+        max_tokens=50
+    )
+    return response.choices[0].message['content'].strip()
+
+
+
 def ask_for_more_details(history_text: str):
 
     response = openai.ChatCompletion.create(
@@ -126,7 +147,7 @@ def ask_to_rephrase_bad_request():
 def generate_no_results_message():
     response = openai.ChatCompletion.create(
         model=MODEL_NAME,
-        messages=[{"role": "assistant", "content": "No relevant items found."}],
+        messages=[{"role": "assistant", "content": "No relevant items found. Do you want to see other items?"}],
         max_tokens=50
     )
     return response.choices[0].message['content'].strip()
@@ -168,7 +189,8 @@ def verify_enough_details(input_text: str):
         model=MODEL_NAME,
         messages=[
             {"role": "assistant", 
-             "content": f"""Check if the input has at least 2 clothing details (type, color, style, etc) or asks for examples.
+             "content": f"""Check if the input has at least 2 clothing details (type, color, style, etc) including the name of product or asks for examples.
+                            If user doesn't provide more than 2 details, return "true" and continue with the conversation.
                            Return 2 lines: 'true'/'false' and reason.
                            Input: "{input_text}" """}],
         max_tokens=50
@@ -290,10 +312,9 @@ def main():
             print(f"Buying clothes. Reason: {valid_user_input_reason}")
 
 
-            #hisotry of information
-            history_of_information = "".join([message["role"] + ": " + message["content"] + "\n" for message in st.session_state["messages"]])
-        
-            valid_enough_details, valid_enough_details_reason = verify_enough_details(history_of_information)
+            history = get_history_of_information()
+
+            valid_enough_details, valid_enough_details_reason = verify_enough_details(history)
 
             # log
             if valid_enough_details:
@@ -309,21 +330,44 @@ def main():
             if valid_enough_details:
                 print(f"Enough details. Reason: {valid_enough_details_reason}")
 
-                search_keywords = st.session_state["search_engine"].extract_search_material(history_of_information)
+                ########################################################
+                # Search with embeddings
+                ########################################################
 
-                search_results = st.session_state["search_engine"].embedding_search(search_keywords, k_top=3)
-                
+                k_top_embedding_search = 20
+
+                search_keywords = st.session_state["search_engine"].extract_search_material(history)
+                search_results = st.session_state["search_engine"].embedding_search(search_keywords, k_top=k_top_embedding_search)
+
+                ########################################################
+                # verify results
+                ########################################################    
+
+                selected_results = []
+
+                for result in tqdm(search_results, desc="Verifying results"):
+                    check, reason = st.session_state["search_engine"].verify_search_result_relevance(search_keywords, result)
+                    
+                    if check:
+                        logger.info(f"Verified result. Reason: {reason}, result: {result}")
+                        selected_results.append(result)
+                    else:
+                        logger.info(f"Unverified result. Reason: {reason}, result: {result}")
+
+
+                ########
                 # log
-                
-                if len(search_results) == 0:
+                ########
+
+                if len(selected_results) == 0:
                     logger.info("No matching items found.")
                 else:
-                    logger.info(f"Found {len(search_results)} matching items")
-                    for result in search_results:
-                        logger.info(f"Matching item ID: {result['id']}, Score: {result['score']}, details: {result['metadata']}")
+                    logger.info(f"Found {len(selected_results)} matching items")
+                    for result in selected_results:
+                        logger.info(f"Matching item ID: {result['id']}, Score: {result['score']}, details: {result['metadata']['prod_name']}")
 
 
-                if len(search_results) == 0:
+                if len(selected_results) == 0:
                     assistant_message = generate_no_results_message()
                     st.session_state["messages"].append({"role": "assistant", "content": assistant_message})
 
@@ -333,22 +377,15 @@ def main():
 
                 else:
 
-                    # pdb.set_trace()
+                    k_top_results_to_display = 3
+                    if len(selected_results) > k_top_results_to_display:
+                        selected_results = selected_results[:k_top_results_to_display]
 
-                    #to do: ask for more details
-                    # Get AI response
-                    response = openai.ChatCompletion.create(
-                        model=MODEL_NAME,
-                        messages=st.session_state["messages"],
-                        max_tokens=MAX_TOKENS
-                    )
 
-                    # Add assistant message to history
-                    assistant_message = response['choices'][0]['message']['content']
+                    assistant_message = generate_prompt_results_of_query(history, selected_results)
                     st.session_state["messages"].append({"role": "assistant", "content": assistant_message})
 
-
-                    for result in search_results:
+                    for result in selected_results:
                         image_path = st.session_state["search_engine"].get_image_path(result["id"])
 
                     if not os.path.exists(image_path):
@@ -367,7 +404,7 @@ def main():
 
             else:
                  
-                assistant_message = ask_for_more_details(history_of_information)
+                assistant_message = ask_for_more_details(history)
                 st.session_state["messages"].append({"role": "assistant", "content": assistant_message})
         
         else:

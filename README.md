@@ -90,6 +90,49 @@ docker run -p 8510:8510 \
   clothes_recommendation_system
 ```
 
+## Logging
+
+All logging is done using the `logger` object. To modify the logging configuration, edit the `src/logging_config.py` file.
+
+
 ## Example Query
 "I am looking for a long white shirt."
+
+
+
+
+## How the Search Engine Operates
+
+1. Information Gathering and Client Inquiry
+   - Ensuring the client has a clear understanding of their requirements
+   - Posing clarifying questions if necessary
+
+2. Keyword Selection for Search
+   - Choosing keywords based on the client's information and the assistant's analysis
+
+3. Shallow Search with Embedding Similarity
+   - Rapidly identifying potential matches using vector embeddings
+   - Applied across the entire dataset
+
+4. Deep Search with LLM Verification
+   - Validating and refining results using a Large Language Model
+   - Conducted on the results of the shallow search
+
+5. Leveraging Chat History for Accuracy
+   - Utilizing past interactions to improve recommendation precision
+
+6. Reasoning with Assistant and Client Data
+   - Integrating insights from both the assistant's analysis and client data
+
+
+## Feedback Mechanism
+
+The feedback mechanism leverages textual data to iteratively refine the recommendation engine. By analyzing user interactions over time, the system adapts to individual preferences and styles, utilizing historical keyword data to enhance search accuracy and relevance.
+
+## Additional Features
+
+1. Client Behavior Analysis
+   - Identifies purchase intent through interaction patterns
+   - Detects anomalous or suspicious behavior to ensure system integrity
+
 
