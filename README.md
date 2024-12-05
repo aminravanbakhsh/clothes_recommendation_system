@@ -75,10 +75,13 @@ pytest tests/test_app.py
 
 Build the Docker image:
 ```bash
-docker build -t clothes_recommendation_system .
+docker build --no-cache -t clothes_recommendation_system .
 ```
 
 Run the container:
+
+Please make sure the port 8510 is not occupied.
+
 ```bash
 # Basic run
 docker run -p 8510:8510 clothes_recommendation_system
