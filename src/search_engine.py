@@ -63,26 +63,22 @@ class SearchEngine:
 
         self.data_dir               = data_dir
         self.query_history          = []
-        n_selection                 = 100    
+        n_selection                 = 10000
 
         ########################################################  
-        # generating search text and embeddings
+        # generating search text 
         ########################################################
 
         logger.info(f"Loading articles from {os.path.join(self.data_dir, 'articles.csv')}")
 
         self.table = pd.read_csv(os.path.join(self.data_dir, "articles.csv"))
 
-        if n_selection is not None:
+        if (n_selection is not None) and (n_selection > len(self.table)):
             self.table = self.table[:n_selection]
 
         tqdm.pandas(desc="Creating search text")
         self.table["search_text"] = self.table.progress_apply(self.row_to_text, axis=1)
 
-        embeddings = self.embed_text_list(self.table["search_text"].tolist())
-        logger.info(f"Generated embeddings for {len(embeddings)} articles")
-
-        self.table["embedding"] = embeddings
 
         ########################################################
         # vector database
@@ -110,20 +106,31 @@ class SearchEngine:
         self.vector_database = PC.Index(self.index_name)   
 
         if init_vector_database:
-
             logger.info(f"Initializing vector database")
+
+            
             # delete index if it exists
             if self.index_name in existing_index_names:
                 if self.vector_database.describe_index_stats()["total_vector_count"] > 0:
                     self.vector_database.delete(delete_all=True)
 
-            meta_columns = list(set(self.table.columns.tolist()) - set(["embedding"]))  
+            meta_columns = list(set(self.table.columns.tolist()))  
+
+
+            if n_selection < len(self.table):
+                embeddings = self.embed_text_list(self.table["search_text"].tolist()[:n_selection])
+            else:
+                embeddings = self.embed_text_list(self.table["search_text"].tolist())
 
             vectors_to_upsert = [
                 {
                     "id": str(getattr(row, "article_id")),
                     "values": embd.embedding,
-                    "metadata": {col: getattr(row, col) for col in meta_columns if col != "article_id"},
+                    "metadata": {
+                        col: str(getattr(row, col)) if pd.notna(getattr(row, col)) else "N/A" 
+                        for col in meta_columns 
+                        if col != "article_id"
+                    },
                 }
                 for row, embd in zip(self.table.itertuples(), embeddings)
             ]
@@ -138,11 +145,6 @@ class SearchEngine:
 
             print(f"Database status: {self.vector_database.describe_index_stats()}")
 
-        ########################################################  
-        # embedding dimension
-        ########################################################
-
-        self.embedding_dim = len(self.table["embedding"].iloc[0].embedding)
     
         ########################################################
         # Check some samples from the database
@@ -220,6 +222,8 @@ class SearchEngine:
                 print(f"Error generating embeddings: {e}")
                 raise e
                     
+        logger.info(f"Generated embeddings for {len(embeddings)} texts")
+
         return embeddings
 
     def get_image_path(self, article_id: int):
@@ -235,11 +239,13 @@ class SearchEngine:
     def extract_search_material(self, conversation: list) -> str:
         logger.info(f"Extracting search material from query: {conversation}")
 
-        response = openai.ChatCompletion.create( # Updated to use the new chat completions format
+        response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
                 {"role": "assistant", "content": """You are a clothing search relevance checker, used for a retrieval system.
-                Your task is to determine key words in the the conversation for a search query. 
+                Your task is to determine key words in the the conversation for a search query. Pay more attention to the last message from the user. 
+                If first message are different from the last message, ignore them. But if they are relevant, include them. For example:
+                change in color, style, type, etc.
                 return a list of keywords, separated by commas.
                 """},
                 {"role": "user", "content": f"Query: {conversation}"},
@@ -297,8 +303,9 @@ class SearchEngine:
     # verify_search_result_relevance
     ########################################################
 
-    def verify_search_result_relevance(self, query: str, result: str):
-        logger.info(f"Verifying relevance for result based on query. query: {query} result: {result}")
+    def verify_search_result_relevance(self, query: str, result: dict):
+
+        logger.info(f"Verifying relevance for result based on query. query: {query} result id: {result['id']}")
 
         response = openai.ChatCompletion.create(
             model="gpt-4",
@@ -326,4 +333,5 @@ class SearchEngine:
             return False, reason
         
         else:
+            logger.error(f"Invalid response from OpenAI: {result}")
             raise ValueError(f"Invalid response from OpenAI: {result}")

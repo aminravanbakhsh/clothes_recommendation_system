@@ -43,7 +43,9 @@ openai.api_key = OPENAI_API_KEY
 ########################################################
 
 if "search_engine" not in st.session_state:
-    st.session_state["search_engine"] = SearchEngine(data_dir=data_dir, init_vector_database=False)
+    logger.info("Initializing search engine")
+    init_vector_database = True
+    st.session_state["search_engine"] = SearchEngine(data_dir=data_dir, init_vector_database=init_vector_database)
 
 ########################################################
 # Configuration
@@ -147,7 +149,8 @@ def ask_to_rephrase_bad_request():
 def generate_no_results_message():
     response = openai.ChatCompletion.create(
         model=MODEL_NAME,
-        messages=[{"role": "assistant", "content": "No relevant items found. Do you want to see other items?"}],
+        messages=[{"role": "assistant", "content": """generate a prompt like this:
+                   Apologies, no relevant items found according to your requests. Do you want to see other items?"""}],
         max_tokens=50
     )
     return response.choices[0].message['content'].strip()
@@ -189,7 +192,7 @@ def verify_enough_details(input_text: str):
         model=MODEL_NAME,
         messages=[
             {"role": "assistant", 
-             "content": f"""Check if the input has at least 2 clothing details (type, color, style, etc) including the name of product or asks for examples.
+             "content": f"""Check if the input has at least 1 or 2 clothing details (type, color, style, etc) including the name of product or asks for examples.
                             If user doesn't provide more than 2 details, return "true" and continue with the conversation.
                            Return 2 lines: 'true'/'false' and reason.
                            Input: "{input_text}" """}],

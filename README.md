@@ -129,6 +129,9 @@ All logging is done using the `logger` object. To modify the logging configurati
 
 The feedback mechanism leverages textual data to iteratively refine the recommendation engine. By analyzing user interactions over time, the system adapts to individual preferences and styles, utilizing historical keyword data to enhance search accuracy and relevance.
 
+Feedback with like or dislike will be converted to a text feedback. System generates thoughts based on the binary feedback by saving the details of products that user liked or disliked.
+
+
 ## Additional Features
 
 1. Client Behavior Analysis
