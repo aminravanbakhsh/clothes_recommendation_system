@@ -63,7 +63,7 @@ class SearchEngine:
 
         self.data_dir               = data_dir
         self.query_history          = []
-        n_selection                 = 10000
+        n_selection                 = 200000
 
         ########################################################  
         # generating search text 
@@ -283,6 +283,39 @@ class SearchEngine:
         # pdb.set_trace()
 
         return verified_results
+    
+
+    def rerank_search_results(self, query: str, results: list):
+        
+        logger.info(f"Reranking search results for query: {query}")
+
+        # Prepare the messages for the OpenAI API
+        messages = [
+            {"role": "assistant", "content": """You are a ranking assistant for a clothing search system.
+            Your task is to evaluate the following search results based on the user's query.
+            Assign a score between 1 and 10 for each result, where 1 is the least relevant and 10 is the most relevant.
+            Return a list of numbers, in the same order as the results.
+            """},
+            {"role": "user", "content": f"Query: {query}\nResults: {results}"}
+        ]
+
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=messages,
+            max_tokens=100,
+        )
+
+        content = response.choices[0].message['content'].strip()
+        scores = eval(content) 
+
+        scored_results = [(result, idx) for result, idx in zip(results, scores)]
+
+        # Sort results by score
+        sorted_results = sorted(scored_results, key=lambda x: x[1], reverse=True)
+
+        logger.info(f"Reranked results: {sorted_results}")
+        return [result for result, _ in sorted_results]
+
 
     ########################################################
     # Re-Ranking

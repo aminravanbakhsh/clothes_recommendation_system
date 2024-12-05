@@ -44,7 +44,7 @@ openai.api_key = OPENAI_API_KEY
 
 if "search_engine" not in st.session_state:
     logger.info("Initializing search engine")
-    init_vector_database = True
+    init_vector_database = False
     st.session_state["search_engine"] = SearchEngine(data_dir=data_dir, init_vector_database=init_vector_database)
 
 ########################################################
@@ -55,7 +55,7 @@ if "search_engine" not in st.session_state:
 USER_NAME = "Alex"
 MODEL_NAME = "gpt-4"
   
-MAX_TOKENS = 500
+MAX_TOKENS = 1000
 
 # Streamlit page configuration
 st.set_page_config(
@@ -112,7 +112,7 @@ def generate_prompt_results_of_query(history_text: str, results: list):
             conversation: {history_text}
             """}
         ],
-        max_tokens=50
+        max_tokens=MAX_TOKENS
     )
     return response.choices[0].message['content'].strip()
 
@@ -337,7 +337,7 @@ def main():
                 # Search with embeddings
                 ########################################################
 
-                k_top_embedding_search = 20
+                k_top_embedding_search = 5
 
                 search_keywords = st.session_state["search_engine"].extract_search_material(history)
                 search_results = st.session_state["search_engine"].embedding_search(search_keywords, k_top=k_top_embedding_search)
@@ -358,18 +358,10 @@ def main():
                         logger.info(f"Unverified result. Reason: {reason}, result: {result}")
 
 
-                ########
-                # log
-                ########
-
-                if len(selected_results) == 0:
-                    logger.info("No matching items found.")
-                else:
-                    logger.info(f"Found {len(selected_results)} matching items")
-                    for result in selected_results:
-                        logger.info(f"Matching item ID: {result['id']}, Score: {result['score']}, details: {result['metadata']['prod_name']}")
+                reranked_results = st.session_state["search_engine"].rerank_search_results(search_keywords, selected_results)
 
 
+                
                 if len(selected_results) == 0:
                     assistant_message = generate_no_results_message()
                     st.session_state["messages"].append({"role": "assistant", "content": assistant_message})
