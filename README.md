@@ -65,6 +65,8 @@ ps aux | grep streamlit | grep $(whoami) | awk '{print $2}' | xargs kill -9
 
 ## Testing
 
+Add your tests to the `tests` directory.
+
 Run the test suite using pytest:
 ```bash
 pytest tests/test_search_engine.py
