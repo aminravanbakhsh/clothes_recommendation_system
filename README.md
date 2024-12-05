@@ -13,6 +13,9 @@ conda activate proactive
 pip install -r requirements.txt
 
 
+# set user info
+create a file named user_info.py and set the following variables:
+
 # data
 
 create an empty folder named data. By default, it will be ignored by git.
@@ -30,6 +33,10 @@ data
    - images
    - articles.csv
 ```
+
+# RUN
+
+Streamlit run app.py
 
 
 # free streamlit ports
@@ -52,3 +59,13 @@ pytest tests/test_app.py
 # tests
 
 I am looking for a long white shirt.
+
+# docker
+
+docker build -t clothes_recommendation_system .
+docker run -p 8510:8510 clothes_recommendation_system
+
+docker run -p 8510:8510 \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/user_info.py:/app/user_info.py \
+  clothes_recommendation_system

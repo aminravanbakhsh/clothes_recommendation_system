@@ -27,7 +27,7 @@ import json
 from datetime import datetime
 import uuid
 
-from langchain_openai import ChatOpenAI
+# from langchain_openai import ChatOpenAI
 
 import pdb
 
@@ -333,7 +333,7 @@ def main():
 
                 else:
 
-                    pdb.set_trace()
+                    # pdb.set_trace()
 
                     #to do: ask for more details
                     # Get AI response
