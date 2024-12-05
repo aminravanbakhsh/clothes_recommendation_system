@@ -1,71 +1,95 @@
-## clothes_recommendation_system
+# Clothes Recommendation System
+
+A sophisticated AI-powered fashion recommendation system that helps users discover their perfect style.
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.8 or higher
+- Conda package manager
+- OpenAI account
+- Pinecone account
+- Kaggle account
+- Docker (optional)
 
 
-## create a new conda environment
+### Environment Setup
+
+1. Create a new Conda environment:
+```bash
 conda create -n proactive python=3.8 -y
-
-
-# activate the environment
 conda activate proactive
+```
 
-
-# install the requirements
+2. Install dependencies:
+```bash
 pip install -r requirements.txt
-
-
-# set user info
-create a file named user_info.py and set the following variables:
-
-# data
-
-create an empty folder named data. By default, it will be ignored by git.
-download the data from [here](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data) and put it in the data folder.
-
-
-In order to download the data, you need to create an account on kaggle and accept the competition rules.
-
-
-the structure of the data folder should be the following:
-
-
-```
-data
-   - images
-   - articles.csv
 ```
 
-# RUN
+### Configuration
 
-Streamlit run app.py
+Create a `user_info.py` in the root directory with the following OpenAI and Pinecone credentials:
+```python
+OPENAI_API_KEY = "your_openai_api_key"
+PINECONE_INDEX_NAME = "your_index_name"
+PINECONE_API_KEY = "your_api_key"
+PINECONE_ENVIRONMENT = "your_environment"
+PINECONE_CLOUD = "your_cloud"
+PINECONE_HOST = "your_host"
+```
 
+### Data Setup
 
-# free streamlit ports
+1. Create a `data` directory in the project root (automatically ignored by Git)
+2. Download the dataset from [H&M Fashion Recommendations Competition](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data)
+3. Extract the contents to match this structure:
+```
+data/
+├── images/
+└── articles.csv
+```
+
+## Usage
+
+### Running the Application
+```bash
+streamlit run app.py
+```
+
+### Managing Streamlit Ports
+To free up occupied Streamlit ports:
+```bash
 ps aux | grep streamlit | grep $(whoami) | awk '{print $2}' | xargs kill -9
-
-
-# pytest
-# Running Tests
-
-You can test the modules via the `tests` folder. To run the tests, use the following command:
-
 ```
+
+## Testing
+
+Run the test suite using pytest:
+```bash
 pytest tests/test_search_engine.py
 pytest tests/test_app.py
 ```
 
+## Docker Support
 
-
-
-# tests
-
-I am looking for a long white shirt.
-
-# docker
-
+Build the Docker image:
+```bash
 docker build -t clothes_recommendation_system .
+```
+
+Run the container:
+```bash
+# Basic run
 docker run -p 8510:8510 clothes_recommendation_system
 
+# With volume mounts for data and configuration
 docker run -p 8510:8510 \
   -v $(pwd)/data:/app/data \
   -v $(pwd)/user_info.py:/app/user_info.py \
   clothes_recommendation_system
+```
+
+## Example Query
+"I am looking for a long white shirt."
+
