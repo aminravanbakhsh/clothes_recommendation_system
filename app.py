@@ -42,7 +42,8 @@ openai.api_key = OPENAI_API_KEY
 # SearchEngine
 ########################################################
 
-SE = SearchEngine(data_dir=data_dir, init_vector_database=False)
+if "search_engine" not in st.session_state:
+    st.session_state["search_engine"] = SearchEngine(data_dir=data_dir, init_vector_database=False)
 
 ########################################################
 # Configuration
@@ -51,6 +52,7 @@ SE = SearchEngine(data_dir=data_dir, init_vector_database=False)
 # User configuration
 USER_NAME = "Alex"
 MODEL_NAME = "gpt-4"
+  
 MAX_TOKENS = 500
 
 # Streamlit page configuration
@@ -94,12 +96,17 @@ def generate_welcome_message():
 
 
 def ask_for_more_details(history_text: str):
+
     response = openai.ChatCompletion.create(
         model = MODEL_NAME,
         messages = [
-            {"role": "assistant", "content": f"Ask the user for more details about their clothing preferences. Mention that they can specify the type of clothing, color, or any other preferences they have."}
+            {"role": "assistant", 
+            "content": f"""Ask the user for more details about their clothing preferences. 
+                            Mention that they can specify the type of clothing, color, 
+                            or any other preferences they have. 
+                            Also you can use the history of conversation to help you{history_text}."""}
         ],
-        max_tokens=30
+        max_tokens=50
     )
     return response.choices[0].message['content'].strip()
 
@@ -111,7 +118,7 @@ def ask_to_rephrase_bad_request():
         messages=[
             {"role": "assistant", "content": "Please rephrase your question. You can ask about clothing style, color, size, etc."}
         ],
-        max_tokens=30
+        max_tokens=40
     )
     return response.choices[0].message['content'].strip()
 
@@ -120,7 +127,7 @@ def generate_no_results_message():
     response = openai.ChatCompletion.create(
         model=MODEL_NAME,
         messages=[{"role": "assistant", "content": "No relevant items found."}],
-        max_tokens=30
+        max_tokens=50
     )
     return response.choices[0].message['content'].strip()
 
@@ -160,9 +167,10 @@ def verify_enough_details(input_text: str):
     response = openai.ChatCompletion.create(
         model=MODEL_NAME,
         messages=[
-            {"role": "assistant", "content": "You are a helpful assistant that checks if the user has provided enough details about the clothing they want to buy. First line should be 'true' or 'false', second line should be a brief reason why."},
-            {"role": "assistant", "content": f'Is this text providing enough details about buying clothes: "{input_text}"? Check if it mentions at least two of the following: product name, product type, product group, graphical appearance, color group, perceived color value, perceived color master, department, index, index group, section, garment group, or detail description of the clothing.'}
-        ],
+            {"role": "assistant", 
+             "content": f"""Check if the input has at least 2 clothing details (type, color, style, etc) or asks for examples.
+                           Return 2 lines: 'true'/'false' and reason.
+                           Input: "{input_text}" """}],
         max_tokens=50
     )
 
@@ -282,27 +290,6 @@ def main():
             print(f"Buying clothes. Reason: {valid_user_input_reason}")
 
 
-
-
-
-            #to do: ask for more details
-            # Get AI response
-            response = openai.ChatCompletion.create(
-                model=MODEL_NAME,
-                messages=st.session_state["messages"],
-                max_tokens=MAX_TOKENS
-            )
-
-            # Add assistant message to history
-            assistant_message = response['choices'][0]['message']['content']
-            st.session_state["messages"].append({"role": "assistant", "content": assistant_message})
-
-
-
-
-
-
-
             #hisotry of information
             history_of_information = "".join([message["role"] + ": " + message["content"] + "\n" for message in st.session_state["messages"]])
         
@@ -322,9 +309,9 @@ def main():
             if valid_enough_details:
                 print(f"Enough details. Reason: {valid_enough_details_reason}")
 
-                search_keywords = SE.extract_search_material(history_of_information)
+                search_keywords = st.session_state["search_engine"].extract_search_material(history_of_information)
 
-                search_results = SE.embedding_search(search_keywords, k_top=3)
+                search_results = st.session_state["search_engine"].embedding_search(search_keywords, k_top=3)
                 
                 # log
                 
@@ -346,11 +333,23 @@ def main():
 
                 else:
 
-                    # summarize results according to the user's query and history 
-                    # just response based on the results
+                    pdb.set_trace()
+
+                    #to do: ask for more details
+                    # Get AI response
+                    response = openai.ChatCompletion.create(
+                        model=MODEL_NAME,
+                        messages=st.session_state["messages"],
+                        max_tokens=MAX_TOKENS
+                    )
+
+                    # Add assistant message to history
+                    assistant_message = response['choices'][0]['message']['content']
+                    st.session_state["messages"].append({"role": "assistant", "content": assistant_message})
+
 
                     for result in search_results:
-                        image_path = SE.get_image_path(result["id"])
+                        image_path = st.session_state["search_engine"].get_image_path(result["id"])
 
                     if not os.path.exists(image_path):
                         logger.warning(f"Image file not found at path: {image_path}")

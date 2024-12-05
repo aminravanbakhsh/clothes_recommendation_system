@@ -56,19 +56,14 @@ class SearchEngine:
     def __init__(self, init_vector_database: bool, data_dir: str = os.path.join(root_dir, "data")):
 
         logger.info(f"Initializing SearchEngine with data_dir: {data_dir}")
-        self.embedding_model_name = "text-embedding-ada-002"
-        self.index_name = PINECONE_INDEX_NAME
+        
+        self.embedding_model_name   = "text-embedding-ada-002"
+        self.embedding_dim          = 1536
+        self.index_name             = PINECONE_INDEX_NAME
 
-        self.data_dir = data_dir
-        self.query_history = []
-        n_selection = 100    
-
-        response = openai.Embedding.create(
-            model=self.embedding_model_name,
-            input="",
-        )
-
-        self.embedding_dim = len(response.data[0].embedding)
+        self.data_dir               = data_dir
+        self.query_history          = []
+        n_selection                 = 100    
 
         ########################################################  
         # generating search text and embeddings
@@ -97,7 +92,9 @@ class SearchEngine:
         existing_index_names = [index['name'] for index in existing_indexes_info.indexes]
 
         logger.info(f"Checking for existing index: {self.index_name}")
+
         if self.index_name not in existing_index_names:
+            logger.info(f"Index not found. Creating new index")
 
             logger.info(f"Creating new Pinecone index: {self.index_name}")
             PC.create_index(
@@ -113,6 +110,8 @@ class SearchEngine:
         self.vector_database = PC.Index(self.index_name)   
 
         if init_vector_database:
+
+            logger.info(f"Initializing vector database")
             # delete index if it exists
             if self.index_name in existing_index_names:
                 if self.vector_database.describe_index_stats()["total_vector_count"] > 0:
@@ -205,6 +204,9 @@ class SearchEngine:
         return response.data[0].embedding
 
     def embed_text_list(self, text_list: list, batch_size: int = 1000):
+
+        logger.info(f"Generating embeddings for {len(text_list)} texts")
+
         embeddings = []
 
         for i in tqdm(range(0, len(text_list), batch_size), desc="Generating embeddings"):
@@ -230,18 +232,17 @@ class SearchEngine:
     # Search
     ########################################################
 
-    def extract_search_material(self, query: str) -> str:
-        logger.info(f"Extracting search material from query: {query}")
+    def extract_search_material(self, conversation: list) -> str:
+        logger.info(f"Extracting search material from query: {conversation}")
 
         response = openai.ChatCompletion.create( # Updated to use the new chat completions format
             model="gpt-4",
             messages=[
-                {"role": "system", "content": """You are a clothing search relevance checker. 
-                Your task is to determine if a search result matches the user's query.
-                Respond with ONLY two lines:
-                Line 1: Either 'true' or 'false'
-                Line 2: A brief explanation of your decision"""},
-                {"role": "user", "content": f"Query: {query}"},
+                {"role": "assistant", "content": """You are a clothing search relevance checker, used for a retrieval system.
+                Your task is to determine key words in the the conversation for a search query. 
+                return a list of keywords, separated by commas.
+                """},
+                {"role": "user", "content": f"Query: {conversation}"},
             ]
         )
 
@@ -302,7 +303,12 @@ class SearchEngine:
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "assistant", "content": f"Is this result relevant to the query?\nQuery: \"{query}\"\nResult: \"{result}\""}
+                {"role": "assistant", "content": f"""You are a clothing search relevance checker, used for a retrieval system.
+                Your task is to determine if a search result matches the user's query.
+                Respond with ONLY two lines:
+                Line 1: Either 'true' or 'false'
+                Line 2: A brief explanation of your decision
+                Query: \"{query}\"\nResult: \"{result}\""""}
             ]
         )
 
