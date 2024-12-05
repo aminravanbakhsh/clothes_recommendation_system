@@ -108,6 +108,8 @@ def generate_prompt_results_of_query(history_text: str, results: list):
             {"role": "assistant", 
             "content": f"""Based on the following conversation and search results, generate an engaging prompt for the user to choose their favorite item.
             For example: based on your requests, I found out following items related to your requests:
+
+            Note: do not show scores in the prompt.
             results: {results_text}
             conversation: {history_text}
             """}
@@ -239,15 +241,12 @@ def display_chat_history():
                     st.markdown("#### Product Details")
                     st.markdown(f"**Product Name:** {message['details'].get('prod_name', 'N/A')}")
                     st.markdown(f"**Product Type:** {message['details'].get('product_type_name', 'N/A')}")
-                    st.markdown(f"**Department:** {message['details'].get('department_name', 'N/A')}")
-                    st.markdown(f"**Category:** {message['details'].get('product_group_name', 'N/A')}")
                 
                 # Color and appearance information in second column
                 with col2:
                     st.markdown("#### Style Details")
                     st.markdown(f"**Color:** {message['details'].get('colour_group_name', 'N/A')}")
                     st.markdown(f"**Pattern:** {message['details'].get('graphical_appearance_name', 'N/A')}")
-                    st.markdown(f"**Section:** {message['details'].get('section_name', 'N/A')}")
                 
                 # Description in full width
                 st.markdown("#### Description")
@@ -255,6 +254,9 @@ def display_chat_history():
                 
                 # Technical details in expandable section
                 with st.expander("Technical Details"):
+                    st.markdown(f"**Department:** {message['details'].get('department_name', 'N/A')}")
+                    st.markdown(f"**Category:** {message['details'].get('product_group_name', 'N/A')}")
+                    st.markdown(f"**Section:** {message['details'].get('section_name', 'N/A')}")
                     st.markdown(f"**Item ID:** {message.get('id', 'N/A')}")
                     st.markdown(f"**Match Score:** {message.get('score', 'N/A')}")
                     st.markdown(f"**Index Group:** {message['details'].get('index_group_name', 'N/A')}")
@@ -352,7 +354,7 @@ def main():
                     check, reason = st.session_state["search_engine"].verify_search_result_relevance(search_keywords, result)
                     
                     if check:
-                        logger.info(f"Verified result. Reason: {reason}, result: {result}")
+                        logger.info(f"Verified result. Reason: {reason}, result: {result}")   
                         selected_results.append(result)
                     else:
                         logger.info(f"Unverified result. Reason: {reason}, result: {result}")
@@ -383,19 +385,19 @@ def main():
                     for result in selected_results:
                         image_path = st.session_state["search_engine"].get_image_path(result["id"])
 
-                    if not os.path.exists(image_path):
-                        logger.warning(f"Image file not found at path: {image_path}")
-                    else:
-                        logger.info(f"Image file successfully located at: {image_path}")
-                    
-                    # Instead of displaying the image directly, store it in the message
-                    st.session_state["messages"].append({
-                        "role": "assistant",
-                        "content": f"Found item with ID: {result['id']}.",
-                        "image_path": image_path,
-                        "details": result["metadata"],
-                        "caption": f"Found item with ID: {result['id']}"
-                    })        
+                        if not os.path.exists(image_path):
+                            logger.warning(f"Image file not found at path: {image_path}")
+                        else:
+                            logger.info(f"Image file successfully located at: {image_path}")
+                        
+                        # Instead of displaying the image directly, store it in the message
+                        st.session_state["messages"].append({
+                            "role": "assistant",
+                            "content": f"Found item with ID: {result['id']}.",
+                            "image_path": image_path,
+                            "details": result["metadata"],
+                            "caption": f"Found item with ID: {result['id']}"
+                        })        
 
             else:
                  

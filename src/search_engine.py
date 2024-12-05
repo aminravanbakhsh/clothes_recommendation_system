@@ -286,6 +286,9 @@ class SearchEngine:
     
 
     def rerank_search_results(self, query: str, results: list):
+
+        if not results:
+            return []
         
         logger.info(f"Reranking search results for query: {query}")
 
